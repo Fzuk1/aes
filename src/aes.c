@@ -54,7 +54,6 @@ static u8 sbox(u8 x) {
 static u8 inv_sbox(u8 x) {
 	char str[2] = {inv_sbox_string[x*2], inv_sbox_string[x*2+1]};
 	u32 hex = (u32)strtol(str, NULL, 16);
-	/* printf("%X: %X\n", x, hex); */
 	return (u8)hex;
 }
 
@@ -70,7 +69,6 @@ static u8 *state_from_bytes(char *data) {
 }
 
 static u32 word_from_bytes(u8 b1, u8 b2, u8 b3, u8 b4) {
-	// CORRECT
 	return
 		((u32)b1 << 24) |
 		((u32)b2 << 16) |
@@ -79,7 +77,6 @@ static u32 word_from_bytes(u8 b1, u8 b2, u8 b3, u8 b4) {
 }
 
 static u8 *bytes_from_word(u32 word) {
-	// CORRECT
 	u8 b1 = (u8)(word >> 24);
 	u8 b2 = (u8)(word >> 16);
 	u8 b3 = (u8)(word >> 8);
@@ -95,7 +92,6 @@ static u8 *bytes_from_word(u32 word) {
 
 
 static u32 rot_word(u32 word) {
-	// CORRECT
 	u8 b1 = (u8)(word >> 24);
 
 	u32 temp = word << 8;
@@ -105,7 +101,6 @@ static u32 rot_word(u32 word) {
 }
 
 static u32 sub_word(u32 word) {
-	// CORRECT
 	u8 *word_arr = bytes_from_word(word);
 
 	u8 sub_word[4] = { 0 };
@@ -119,14 +114,12 @@ static u32 sub_word(u32 word) {
 }
 
 static u32 rcon(u32 i) {
-	// CORRECT
 	u8 rcon_lookup[10] = {0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80,0x1B,0x36};
 	u8 rconB[4] = {rcon_lookup[i-1], 0x00, 0x00, 0x00};
 	return word_from_bytes(rconB[0], rconB[1], rconB[2], rconB[3]);
 }
 
 static u32 *key_expansion(char *key, u32 nr, u32 nk) {
-	// CORRECT
 	u32 temp;
 	u32 i = 0;
 	u32 *w = malloc(sizeof(u32) * NB * (nr + 1));
@@ -141,14 +134,12 @@ static u32 *key_expansion(char *key, u32 nr, u32 nk) {
 	while (i < NB * (nr + 1)) {
 		temp = w[i-1];
 		if ((i % nk) == 0) {
-			// TODO: Maybe XOR (^) has to be implemented as a function?
 			temp = sub_word(rot_word(temp)) ^ rcon(i/nk);
 		}
 		else if ((nk > 6) && ((i % nk) == 4)) {
 			temp = sub_word(temp);
 		}
 
-		// TODO: Maybe XOR (^) has to be implemented as a function?
 		w[i] = w[i-nk] ^ temp;
 		i++;
 	}
@@ -339,8 +330,6 @@ static void inv_mix_columns(u8 *state) {
 		u8 s2c = state[2*NB+c];
 		u8 s3c = state[3*NB+c];
 
-		// TODO: Works for c=0 and c=3, but not for c=1 or c=2? Why...
-
 		u8 s0c_hex02 = xtime(s0c);
 		u8 s0c_hex04 = xtime(s0c_hex02);
 		u8 s0c_hex08 = xtime(s0c_hex04);
@@ -445,7 +434,7 @@ static char *aes_decrypt_block(char *cipher, char *key, u32 key_size) {
 
 
 /* PUBLIC FUNCTIONS */
-void aes_start_enc() {
+void aes_test_enc() {
 	char plaintext[16] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff};
 
 
@@ -482,7 +471,7 @@ void aes_start_enc() {
 	return;
 }
 
-void aes_start_dec() {
+void aes_test_dec() {
 	char expected[16+1] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, '\0'};
 
 

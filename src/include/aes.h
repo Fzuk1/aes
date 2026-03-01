@@ -8,9 +8,9 @@
 #define BYTE (8)
 
 #define ROWS (4)
-#define NB (BLOCK / 32)
+#define NB (4)
 
-void aes_start_enc();
-void aes_start_dec();
+void aes_test_enc();
+void aes_test_dec();
 
 #endif /* AES_H */
