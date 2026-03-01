@@ -8,7 +8,7 @@
 #include "aes.h"
 
 /* STATIC VARIABLES */
-static const char *s_box_string =
+static const char *sbox_string =
 	"637c777bf26b6fc53001672bfed7ab76"
 	"ca82c97dfa5947f0add4a2af9ca472c0"
 	"b7fd9326363ff7cc34a5e5f171d83115"
@@ -26,9 +26,33 @@ static const char *s_box_string =
 	"e1f8981169d98e949b1e87e9ce5528df"
 	"8ca1890dbfe6426841992d0fb054bb16";
 
+static const char *inv_sbox_string =
+	"52096ad53036a538bf40a39e81f3d7fb"
+	"7ce339829b2fff87348e4344c4dee9cb"
+	"547b9432a6c2233dee4c950b42fac34e"
+	"082ea16628d924b2765ba2496d8bd125"
+	"72f8f66486689816d4a45ccc5d65b692"
+	"6c704850fdedb9da5e154657a78d9d84"
+	"90d8ab008cbcd30af7e45805b8b34506"
+	"d02c1e8fca3f0f02c1afbd0301138a6b"
+	"3a9111414f67dcea97f2cfcef0b4e673"
+	"96ac7422e7ad3585e2f937e81c75df6e"
+	"47f11a711d29c5896fb7620eaa18be1b"
+	"fc563e4bc6d279209adbc0fe78cd5af4"
+	"1fdda8338807c731b11210592780ec5f"
+	"60517fa919b54a0d2de57a9f93c99cef"
+	"a0e03b4dae2af5b0c8ebbb3c83539961"
+	"172b047eba77d626e169146355210c7d";
+
 /* STATIC FUNCTIONS */
-static u8 s_box(u8 x) {
-	char str[2] = {s_box_string[x*2], s_box_string[x*2+1]};
+static u8 sbox(u8 x) {
+	char str[2] = {sbox_string[x*2], sbox_string[x*2+1]};
+	u32 hex = (u32)strtol(str, NULL, 16);
+	return (u8)hex;
+}
+
+static u8 inv_sbox(u8 x) {
+	char str[2] = {inv_sbox_string[x*2], inv_sbox_string[x*2+1]};
 	u32 hex = (u32)strtol(str, NULL, 16);
 	/* printf("%X: %X\n", x, hex); */
 	return (u8)hex;
@@ -86,7 +110,7 @@ static u32 sub_word(u32 word) {
 
 	u8 sub_word[4] = { 0 };
 	for (u32 i = 0; i < 4; i++) {
-		sub_word[i] = s_box(word_arr[i]);
+		sub_word[i] = sbox(word_arr[i]);
 	}
 
 	free(word_arr);
@@ -157,7 +181,7 @@ static void add_round_key(u8 *state, u32 *w, u32 round) {
 static void sub_bytes(u8 *state) {
 	for (u32 c = 0; c < NB; c++) {
 		for (u32 r = 0; r < ROWS; r++) {
-			state[r * NB + c] = s_box(state[r * NB + c]);
+			state[r * NB + c] = sbox(state[r * NB + c]);
 		}
 	}
 }
@@ -276,16 +300,91 @@ static char *aes_encrypt_block(char *data, char *key, u32 key_size) {
 }
 
 
-static void inv_mix_columns() {
-	// TODO
+static void inv_shift_rows(u8 *state) {
+	// ROW 1 = 1 right
+	u8 r1c3 = state[1*NB+3];
+	state[1*NB+3] = state[1*NB+2];
+	state[1*NB+2] = state[1*NB+1];
+	state[1*NB+1] = state[1*NB+0];
+	state[1*NB+0] = r1c3;
+
+	// ROW 2 = 2 right
+	u8 r2c2 = state[2*NB+2];
+	u8 r2c3 = state[2*NB+3];
+	state[2*NB+3] = state[2*NB+1];
+	state[2*NB+2] = state[2*NB+0];
+	state[2*NB+1] = r2c3;
+	state[2*NB+0] = r2c2;
+
+	// ROW 3 = 1 left = 3 right
+	u8 r3c0 = state[3*NB+0];
+	state[3*NB+0] = state[3*NB+1];
+	state[3*NB+1] = state[3*NB+2];
+	state[3*NB+2] = state[3*NB+3];
+	state[3*NB+3] = r3c0;
 }
 
-static void inv_shift_rows() {
-	// TODO
+static void inv_sub_bytes(u8 *state) {
+	for (u32 c = 0; c < NB; c++) {
+		for (u32 r = 0; r < ROWS; r++) {
+			state[r * NB + c] = inv_sbox(state[r * NB + c]);
+		}
+	}
 }
 
-static void inv_sub_bytes() {
-	// TODO
+static void inv_mix_columns(u8 *state) {
+	for (u32 c = 0; c < NB; c++) {
+		u8 s0c = state[0*NB+c];
+		u8 s1c = state[1*NB+c];
+		u8 s2c = state[2*NB+c];
+		u8 s3c = state[3*NB+c];
+
+		// TODO: Works for c=0 and c=3, but not for c=1 or c=2? Why...
+
+		u8 s0c_hex02 = xtime(s0c);
+		u8 s0c_hex04 = xtime(s0c_hex02);
+		u8 s0c_hex08 = xtime(s0c_hex04);
+
+		u8 s1c_hex02 = xtime(s1c);
+		u8 s1c_hex04 = xtime(s1c_hex02);
+		u8 s1c_hex08 = xtime(s1c_hex04);
+
+		u8 s2c_hex02 = xtime(s2c);
+		u8 s2c_hex04 = xtime(s2c_hex02);
+		u8 s2c_hex08 = xtime(s2c_hex04);
+
+		u8 s3c_hex02 = xtime(s3c);
+		u8 s3c_hex04 = xtime(s3c_hex02);
+		u8 s3c_hex08 = xtime(s3c_hex04);
+
+		// Calculating state row 0, col c
+		state[0*NB+c] =
+			(s0c_hex02 ^ s0c_hex04 ^ s0c_hex08) ^
+			(s1c ^ s1c_hex02 ^ s1c_hex08) ^
+			(s2c ^ s2c_hex04 ^ s2c_hex08) ^
+			(s3c ^ s3c_hex08);
+
+		// Calculating state row 1, col c
+		state[1*NB+c] =
+			(s0c ^ s0c_hex08) ^
+			(s1c_hex02 ^ s1c_hex04 ^ s1c_hex08) ^
+			(s2c ^ s2c_hex02 ^ s2c_hex08) ^
+			(s3c ^ s3c_hex04 ^ s3c_hex08);
+
+		// Calculating state row 2, col c
+		state[2*NB+c] =
+			(s0c ^ s0c_hex04 ^ s0c_hex08) ^
+			(s1c ^ s1c_hex08) ^
+			(s2c_hex02 ^ s2c_hex04 ^ s2c_hex08) ^
+			(s3c ^ s3c_hex02 ^ s3c_hex08);
+
+		// Calculating state row 3, col c
+		state[3*NB+c] =
+			(s0c ^ s0c_hex02 ^ s0c_hex08) ^
+			(s1c ^ s1c_hex04 ^ s1c_hex08) ^
+			(s2c ^ s2c_hex08) ^
+			(s3c_hex02 ^ s3c_hex04 ^ s3c_hex08);
+	}
 }
 
 
