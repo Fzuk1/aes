@@ -237,58 +237,6 @@ static char *bytes_from_state(u8 *state) {
 }
 
 
-static char *aes_encrypt_block(char *data, char *key, u32 key_size) {
-
-	u8 *state = state_from_bytes(data);
-
-	u32 nr = 0;
-	u32 nk = 0;
-	u32 key_bit_length = key_size * 8;
-	switch (key_bit_length) {
-	case 128:
-		nr = 10;
-		nk = 4;
-		break;
-	case 192:
-		nr = 12;
-		nk = 6;
-		break;
-	case 256:
-		nr = 14;
-		nk = 8;
-		break;
-	default:
-		printf("Invalid Key size\n");
-		exit(1);
-		break;
-	}
-
-	u32 *key_schedule = key_expansion(key, nr, nk);
-
-	u32 round = 0;
-	add_round_key(state, key_schedule, round);
-
-	// Rounds 1 to nr-1
-	for (round = 1; round < nr; round++) {
-		sub_bytes(state);
-		shift_rows(state);
-		mix_columns(state);
-		add_round_key(state, key_schedule, round);
-	}
-
-	// Round nr
-	sub_bytes(state);
-	shift_rows(state);
-	round = nr;
-	add_round_key(state, key_schedule, round);
-
-	char *output = bytes_from_state(state);
-
-	free(state);
-	free(key_schedule);
-
-	return output;
-}
 
 
 static void inv_shift_rows(u8 *state) {
@@ -377,7 +325,64 @@ static void inv_mix_columns(u8 *state) {
 }
 
 
-static char *aes_decrypt_block(char *cipher, char *key, u32 key_size) {
+
+
+/* PUBLIC FUNCTIONS */
+char *aes_encrypt_block(char *data, char *key, u32 key_size) {
+
+	u8 *state = state_from_bytes(data);
+
+	u32 nr = 0;
+	u32 nk = 0;
+	u32 key_bit_length = key_size * 8;
+	switch (key_bit_length) {
+	case 128:
+		nr = 10;
+		nk = 4;
+		break;
+	case 192:
+		nr = 12;
+		nk = 6;
+		break;
+	case 256:
+		nr = 14;
+		nk = 8;
+		break;
+	default:
+		printf("Invalid Key size\n");
+		exit(1);
+		break;
+	}
+
+	u32 *key_schedule = key_expansion(key, nr, nk);
+
+	u32 round = 0;
+	add_round_key(state, key_schedule, round);
+
+	// Rounds 1 to nr-1
+	for (round = 1; round < nr; round++) {
+		sub_bytes(state);
+		shift_rows(state);
+		mix_columns(state);
+		add_round_key(state, key_schedule, round);
+	}
+
+	// Round nr
+	sub_bytes(state);
+	shift_rows(state);
+	round = nr;
+	add_round_key(state, key_schedule, round);
+
+	char *output = bytes_from_state(state);
+
+	free(state);
+	free(key_schedule);
+
+	return output;
+}
+
+
+char *aes_decrypt_block(char *cipher, char *key, u32 key_size) {
 
 	u8 *state = state_from_bytes(cipher);
 	
@@ -431,9 +436,7 @@ static char *aes_decrypt_block(char *cipher, char *key, u32 key_size) {
 }
 
 
-
-
-/* PUBLIC FUNCTIONS */
+/* ========== TESTS ========== */
 void aes_test_enc() {
 	char plaintext[16] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff};
 
@@ -470,6 +473,7 @@ void aes_test_enc() {
 
 	return;
 }
+
 
 void aes_test_dec() {
 	char expected[16+1] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, '\0'};
