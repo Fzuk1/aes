@@ -163,14 +163,14 @@ static void sub_bytes(u8 *state) {
 }
 
 static void shift_rows(u8 *state) {
-	// ROW 1
+	// ROW 1 = 1 left
 	u8 r1c0 = state[1*NB+0];
 	state[1*NB+0] = state[1*NB+1];
 	state[1*NB+1] = state[1*NB+2];
 	state[1*NB+2] = state[1*NB+3];
 	state[1*NB+3] = r1c0;
 
-	// ROW 2
+	// ROW 2 = 2 left
 	u8 r2c0 = state[2*NB+0];
 	u8 r2c1 = state[2*NB+1];
 	state[2*NB+0] = state[2*NB+2];
@@ -178,7 +178,7 @@ static void shift_rows(u8 *state) {
 	state[2*NB+2] = r2c0;
 	state[2*NB+3] = r2c1;
 
-	// ROW 3
+	// ROW 3 = 1 right = 3 left
 	u8 r3c3 = state[3*NB+3];
 	state[3*NB+3] = state[3*NB+2];
 	state[3*NB+2] = state[3*NB+1];
